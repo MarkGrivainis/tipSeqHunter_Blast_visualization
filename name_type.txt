@@ -1,0 +1,17 @@
+chrX-67263227-67266630_NODE_1_length_3534_cov_599.422 + +
+chr6-115897431-115900020_NODE_1_length_2717_cov_579.651 - -
+chrX-76421057-76425569_NODE_1_length_4643_cov_387.628 - +
+chrX-72606851-72611451_NODE_1_length_4731_cov_586.294 + -
+
+
+chr7-45733728-45737483_NODE_1_length_3057_cov_299.311 + - offsets incorrect
+chr8-135429828-135433137_NODE_1_length_1822_cov_29.7153 + - does not contain taat atta
+
+
+chrX-63330404-63334064_NODE_1_length_3765_cov_317.656 - + offset incorrect
+chrX-67263227-67266039_NODE_1_length_2853_cov_232.391 + - offset incorrect
+chr9-113185407-113187439_NODE_1_length_1828_cov_227.956 + - 9 instead of 10 flanking
+chr3-27135159-27139301_NODE_1_length_2784_cov_60.8703 + + 11 instead of 10 flanking and check poly a tail length
+chr9-28108780-28111893_NODE_1_length_3190_cov_331.876 - - calculation is incorrect
+
+
