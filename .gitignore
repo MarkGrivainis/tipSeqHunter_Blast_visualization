@@ -7,3 +7,7 @@
 *.iml
 out
 gen
+output/
+fasta/
+other_files/
+repred/
