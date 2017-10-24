@@ -8,6 +8,9 @@
 out
 gen
 output/
-fasta/
+fp/fasta/
 other_files/
-repred/
+fp/repred/
+hg_19.fa
+fp/
+pcr/

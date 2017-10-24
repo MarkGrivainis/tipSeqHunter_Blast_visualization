@@ -19,4 +19,4 @@ SGE_TASK_ID=7
 
 samples_file=${1}
 sample=$(sed -n "${SGE_TASK_ID}p" ${samples_file})
-python blast_assembly.py ${sample}
+python blast_assembly_pcr.py ${sample}
