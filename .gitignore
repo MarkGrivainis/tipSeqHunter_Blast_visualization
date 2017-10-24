@@ -11,3 +11,6 @@ output/
 fasta/
 other_files/
 repred/
+blast_ass_ref.sh.e*
+blast_ass_ref.sh.o*
+output*/
