@@ -8,9 +8,16 @@
 out
 gen
 output/
-fasta/
+fp/fasta/
 other_files/
+<<<<<<< HEAD
 repred/
 blast_ass_ref.sh.e*
 blast_ass_ref.sh.o*
 output*/
+=======
+fp/repred/
+hg_19.fa
+fp/
+pcr/
+>>>>>>> b3167088c12f0b74e60985702311db05e211f701
