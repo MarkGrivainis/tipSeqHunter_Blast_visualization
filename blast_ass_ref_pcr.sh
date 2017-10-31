@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #$ -cwd -S /bin/bash
-source activate tipseqhunterBLAST
+# source activate tipseqhunterBLAST
 # Comment when running on phoenix
-SGE_TASK_ID=7
+# SGE_TASK_ID=7
 
 # settings for cluster
-# module load python/3.4.3
+module load python/3.4.3
+module load blast/2.3.0+
 
 #folder=${1}
 #standard=${2}

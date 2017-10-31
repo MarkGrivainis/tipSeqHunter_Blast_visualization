@@ -15,7 +15,7 @@ L1_PCR = {
     '-': 'attatactctaagttttagggtacatgtgcacattgtgcaggttagttacatatgtatacatgtgccatgctggtgcgctgcacccactaacgtgtcatctagcattaggtatatct'
 }
 
-POLY_A_LENGTH_FOR_REFERENCE = 50
+POLY_A_LENGTH_FOR_REFERENCE = 60
 
 L1_PCR['+'] += 'A' * POLY_A_LENGTH_FOR_REFERENCE
 L1_PCR['-'] = 'T' * POLY_A_LENGTH_FOR_REFERENCE + L1_PCR['-']
