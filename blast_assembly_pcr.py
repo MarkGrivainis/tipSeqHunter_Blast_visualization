@@ -3,19 +3,19 @@ import configparser
 import os
 import re
 import sys
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 
 import pandas as pd
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio.SeqIO import parse
-import xml.etree.ElementTree as ET
 
 L1_PCR = {
     '+': 'agatatacctaatgctagatgacacgttagtgggtgcagcgcaccagcatggcacatgtatacatatgtaactaacctgcacaatgtgcacatgtaccctaaaacttagagtataat',
     '-': 'attatactctaagttttagggtacatgtgcacattgtgcaggttagttacatatgtatacatgtgccatgctggtgcgctgcacccactaacgtgtcatctagcattaggtatatct'
 }
 
-POLY_A_LENGTH_FOR_REFERENCE = 60
+POLY_A_LENGTH_FOR_REFERENCE = 100
 
 L1_PCR['+'] += 'A' * POLY_A_LENGTH_FOR_REFERENCE
 L1_PCR['-'] = 'T' * POLY_A_LENGTH_FOR_REFERENCE + L1_PCR['-']
@@ -70,8 +70,11 @@ output_json['miss'] = defaultdict(list)
 
 results = {}
 xml_path = os.path.join(sample_path, 'xml')
+fasta_path = os.path.join(sample_path, 'fasta')
 if not os.path.exists(xml_path):
     os.makedirs(xml_path)
+if not os.path.exists(fasta_path):
+    os.makedirs(fasta_path)
 xml_files = os.listdir(xml_path)
 filename = fasta_file
 print(filename)
@@ -80,7 +83,7 @@ with open(filename, 'rU') as handle:
     hg_19 = parse(handle, 'fasta')
     for each in hg_19:
         if True:
-        # if each.name == 'chr11-27057892-27060675_NODE_1_length_2072_cov_264.37':
+            # if each.name == 'chr1-214080823-214084909_NODE_1_length_1691_cov_348.457':
             results[each.name] = []
             match = re.match('^(.+?)-(\d+?)-(\d+?)_', each.name)
             match_df = df_repred.loc[(df_repred['H5_TargChr'] == match.group(1)) & (df_repred['H6_TargS'] == int(match.group(2))) & (df_repred['H7_TargE'] == int(match.group(3)))]
@@ -102,8 +105,8 @@ with open(filename, 'rU') as handle:
                 taat_position = junc_position + POLY_A_LENGTH_FOR_REFERENCE
             else:
                 raise RuntimeError('Strand is neither + or -')  # if not str(match_df.iloc[0]['H17_IfGS']) == 'nan' or sample_type == 'pcr':
-
-            if each.name + '.xml' not in xml_files:
+            # TODO change this back so that XML are not overwritten
+            if each.name + '.xml' not in xml_files:  # or True:
                 with open(os.path.join(sample_path, 'temp_sim.fa'), 'w') as sim_fa:
                     sim_fa.write('>{}\n{}'.format(each.name, each.seq))
                 with open(os.path.expanduser(os.path.join(ref_fasta_folder, 'chromFa/{}.fa'.format(match_df['H1_ClipChr'].item()))), 'rU') as handle:
@@ -118,6 +121,13 @@ with open(filename, 'rU') as handle:
                         else:
                             seq = seq + L1_PCR[strand]
                         ref_fa.write('>{}\n{}'.format(each.name, seq))
+                    with open(os.path.join(fasta_path, each.name), 'w') as fa:
+                        fa.write('>{}\n{}\n>{}\n{}'.format(
+                            each.name + '_reference',
+                            seq,
+                            each.name + '_assembled',
+                            each.seq
+                        ))
 
                 blastn_cline = NcbiblastnCommandline(task="megablast",
                                                      query=os.path.join(sample_path, 'temp_ref.fa'),
@@ -171,26 +181,23 @@ for k, v in results.items():
                             blast_start <= each['taat_position'] - FLANKING or each['junc_position'] + FLANKING <=
                         blast_end):
                 hit_or_miss = 'hit'
+                print("Class 3")
                 start = each['taat_position'] - blast_start + 1
                 end = each['junc_position'] - blast_start + 1
-                start_offset_correction = each['Hsp_qseq'][0:start - 1].count('-')
-                # poly_a_offset_correction = start_offset_correction + each['Hsp_qseq'][start:end + start_offset_correction].count('-')
-                poly_a_offset_correction = 0
-                poly_a_offset = 0
-                current_char = start + start_offset_correction
-                print(each['Hsp_qseq'])
-                print(each['Hsp_midline'])
-                print(each['Hsp_hseq'])
-                # add one so that it counts the first character at the taat or atta
-                while poly_a_offset < (end + start_offset_correction) - start + 1:
-                    if current_char == len(each['Hsp_qseq']):
-                        break
-                    if each['Hsp_qseq'][current_char] != '-':
-                        poly_a_offset += 1
-                    else:
-                        poly_a_offset_correction += 1
-                    current_char += 1
-                poly_a_offset_correction += start_offset_correction
+            elif (blast_start <= each['taat_position'] <= blast_end) and (
+                            blast_start <= each['taat_position'] - FLANKING or each['junc_position'] + FLANKING <=
+                        blast_end):
+                hit_or_miss = 'hit'
+                print("Class 1")
+                start = each['taat_position'] - blast_start + 1
+                end = len(each['Hsp_qseq'])
+            elif (blast_start <= each['junc_position'] <= blast_end) and (
+                            blast_start <= each['taat_position'] - FLANKING or each['junc_position'] + FLANKING <=
+                        blast_end):
+                hit_or_miss = 'hit'
+                print("Class 2")
+                start = 0
+                end = each['junc_position'] - blast_start + 1
 
         if each['strand'] == '+' and int(each['Hsp_query-from']) >= int(each['Hsp_query-to']):
             print('+ | -')
@@ -212,26 +219,23 @@ for k, v in results.items():
                             blast_start <= each['junc_position'] - FLANKING or each['taat_position'] + FLANKING <=
                         blast_end):
                 hit_or_miss = 'hit'
-                start = each['junc_position'] - blast_start + 1
+                print("Class 3")
                 end = each['taat_position'] - blast_start + 1
-                start_offset_correction = each['Hsp_qseq'][0:start - 1].count('-')
-                # poly_a_offset_correction = start_offset_correction + each['Hsp_qseq'][start:end + start_offset_correction].count('-')
-                poly_a_offset_correction = 0
-                poly_a_offset = 0
-                current_char = start + start_offset_correction
-                print(each['Hsp_qseq'])
-                print(each['Hsp_midline'])
-                print(each['Hsp_hseq'])
-                # add one so that it counts the first character at the taat or atta
-                while poly_a_offset < (end + start_offset_correction) - start + 1:
-                    if current_char == len(each['Hsp_qseq']):
-                        break
-                    if each['Hsp_qseq'][current_char] != '-':
-                        poly_a_offset += 1
-                    else:
-                        poly_a_offset_correction += 1
-                    current_char += 1
-                poly_a_offset_correction += start_offset_correction
+                start = each['junc_position'] - blast_start + 1
+            elif (blast_start <= each['taat_position'] <= blast_end) and (
+                            blast_start <= each['junc_position'] - FLANKING or each['taat_position'] + FLANKING <=
+                        blast_end):
+                hit_or_miss = 'hit'
+                print("Class 1")
+                end = each['taat_position'] - blast_start + 1
+                start = 0
+            elif (blast_start <= each['junc_position'] <= blast_end) and (
+                            blast_start <= each['junc_position'] - FLANKING or each['taat_position'] + FLANKING <=
+                        blast_end):
+                hit_or_miss = 'hit'
+                print("Class 2")
+                start = each['junc_position'] - blast_start + 1
+                end = len(each['Hsp_qseq'])
         if each['strand'] == '-' and int(each['Hsp_query-from']) >= int(each['Hsp_query-to']):
             print('+ | -')
             # print(blast_start, each['taat_position'], each['junc_position'], blast_end)
@@ -243,6 +247,26 @@ for k, v in results.items():
             # start = 0
             # end = 0
             raise AssertionError('strand has been reverse complemented')
+        # TODO remove for later
+        start_offset_correction = each['Hsp_qseq'][0:start - 1].count('-')
+        # poly_a_offset_correction = start_offset_correction + each['Hsp_qseq'][start:end + start_offset_correction].count('-')
+        poly_a_offset_correction = 0
+        poly_a_offset = 0
+        current_char = start + start_offset_correction
+        print(each['Hsp_qseq'])
+        print(each['Hsp_midline'])
+        print(each['Hsp_hseq'])
+        # add one so that it counts the first character at the taat or atta
+        while poly_a_offset < (end + start_offset_correction) - start + 1:
+            if current_char == len(each['Hsp_qseq']):
+                break
+            if each['Hsp_qseq'][current_char] != '-':
+                poly_a_offset += 1
+            else:
+                poly_a_offset_correction += 1
+            current_char += 1
+        poly_a_offset_correction += start_offset_correction
+
         if start != -1 and end != -1:
             # -1 so that the last t is not included as part of the poly a tail
 
@@ -308,7 +332,7 @@ for k, v in results.items():
             })
         else:
             output_json[hit_or_miss][k].append(each['GS'])
-
+#
 fh = open(os.path.join(sample_path, 'output_' + sample + '.csv'), 'w')
 fh.write('{},{},{},{},{}\n'.format('id', 'patient_length', 'reference_length', 'type', 'GS'))
 print('hits', len(output_json['hit']))
