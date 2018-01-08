@@ -82,8 +82,8 @@ count = 0
 with open(filename, 'rU') as handle:
     hg_19 = parse(handle, 'fasta')
     for each in hg_19:
-        if True:
-            # if each.name == 'chr1-214080823-214084909_NODE_1_length_1691_cov_348.457':
+        # if True:
+        if each.name == 'chr2-118667566-118670578_NODE_1_length_1741_cov_6.21412':
             results[each.name] = []
             match = re.match('^(.+?)-(\d+?)-(\d+?)_', each.name)
             match_df = df_repred.loc[(df_repred['H5_TargChr'] == match.group(1)) & (df_repred['H6_TargS'] == int(match.group(2))) & (df_repred['H7_TargE'] == int(match.group(3)))]

@@ -43,6 +43,8 @@ rev_nucleotides = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C', 'N': 'N', '-': '-'}
 
 FLANKING = 10
 
+print('fa', fasta_file)
+print('repred', repred_file)
 
 def reverse_comp(seq):
     new_seq = ''.join([rev_nucleotides[x] for x in seq])[::-1]
@@ -60,20 +62,25 @@ output_json['miss'] = defaultdict(list)
 results = {}
 # with open('simu.frag-300.len-100.cov-100.error-10.snps-5.rpt-1.fa', 'rU') as handle:
 xml_path = os.path.join(sample_path, 'xml')
+fasta_path = os.path.join(sample_path, 'fasta')
 if not os.path.exists(xml_path):
     os.makedirs(xml_path)
+if not os.path.exists(fasta_path):
+    os.makedirs(fasta_path)
 xml_files = os.listdir(xml_path)
 filename = fasta_file
-print(filename)
+# print(filename)
 with open(filename, 'rU') as handle:
     hg_19 = parse(handle, 'fasta')
     for each in hg_19:
         if True:
+        # if each.name == 'chr2-118667566-118670578_NODE_1_length_1741_cov_6.21412':
             # if each.name in ['chr8-48240865-48244565_NODE_1_length_2657_cov_195.635']:
             match = re.match('^(.+?)-(\d+?)-(\d+?)_', each.name)
             match_df = df_repred.loc[(df_repred['H5_TargChr'] == match.group(1)) & (df_repred['H6_TargS'] == int(match.group(2))) & (df_repred['H7_TargE'] == int(match.group(3)))]
             if not str(match_df.iloc[0]['H17_IfGS']) == 'nan':
-                # print(each.name)
+                # print(match_df)
+                print(each.name)
                 results[each.name] = []
                 gs = match_df.iloc[0]['H17_IfGS']
                 GS_from_repred = dict(zip(['chrm', 'L1S', 'L1E'], match_df.iloc[0]['H17_IfGS'].split('-')))
@@ -90,16 +97,18 @@ with open(filename, 'rU') as handle:
                     end = TargE
                     taat_position = int(GS_row.iloc[0]['EndBeforePolyA']) - int(GS_row.iloc[0]['L1PrimerStart'])
                     junc_position = int(GS_row.iloc[0]['L1End']) - int(GS_row.iloc[0]['L1PrimerStart'])
-                    junc_offset = TargS - start
+                    # junc_offset = TargS - start
                 elif GS_row.iloc[0]['L1Strand'] == '-':
-                    start = TargS
+                    # TODO - verify this
+                    start = int(GS_row.iloc[0]['EndBeforePolyA']) - (TargE - TargS)
+                    # start = TargS
                     end = int(GS_row.iloc[0]['EndBeforePolyA'])
-                    taat_position = int(GS_row.iloc[0]['L1PrimerStart']) - TargS
-                    junc_position = int(GS_row.iloc[0]['L1Start']) - TargS
-                    junc_offset = end - TargE
+                    taat_position = int(GS_row.iloc[0]['L1PrimerStart']) - start
+                    junc_position = int(GS_row.iloc[0]['L1Start']) - start
+                    # junc_offset = end - TargE
                 else:
                     raise RuntimeError('Strand is neither + or -')
-                if each.name + '.xml' not in xml_files:
+                if each.name + '.xml' not in xml_files or True:
                     with open(os.path.join(sample_path, 'temp_sim.fa'), 'w') as sim_fa:
                         sim_fa.write('>{}\n{}'.format(each.name, each.seq))
                     with open(os.path.expanduser(os.path.join(ref_fasta_folder, 'chromFa/{}.fa'.format(GS_from_repred['chrm']))), 'rU') as handle:
@@ -108,9 +117,16 @@ with open(filename, 'rU') as handle:
                             # print(GS_row)
                             # print(GS_row.iloc[0]['L1Strand'])
                             theSeq = next(ref)
+                            print('s', start, 'e', end)
                             seq = theSeq.seq[start: end]
                             ref_fa.write('>{}\n{}'.format(match_df.iloc[0]['H17_IfGS'], seq))
-
+                        with open(os.path.join(fasta_path, each.name), 'w') as fa:
+                            fa.write('>{}\n{}\n>{}\n{}'.format(
+                                each.name + '_reference',
+                                seq,
+                                each.name + '_assembled',
+                                each.seq
+                            ))
                     blastn_cline = NcbiblastnCommandline(task="megablast",
                                                          query=os.path.join(sample_path, 'temp_ref.fa'),
                                                          subject=os.path.join(sample_path, 'temp_sim.fa'),
